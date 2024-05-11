@@ -1,0 +1,209 @@
+{% extends 'template/jhTemplateV4.html'%}
+
+{% block vueTemplate %}
+<script type="text/html" id="app-template">
+<div>
+<v-app mobile-breakpoint="sm">
+  <jh-menu />
+  <v-main class="mt-15">
+    <!-- 头部内容 >>>>>>>>>>>>> -->
+    <div class="jh-page-second-bar px-8">
+      <v-row class="align-center">
+        <v-col cols="12" xs="12" sm="12" md="4" xl="3">
+          <div class="py-4 text-body-1 font-weight-bold">页面访问日志
+            <!-- 帮助页按钮 -->
+            <span role="button" class="success--text font-weight-regular jh-font-size-13 ml-2" @click="isHelpPageDrawerShown = true">
+              <v-icon size="13" class="success--text">mdi-help-circle-outline</v-icon>帮助
+            </span>
+          </div>
+        </v-col>
+        <!-- pc端的搜索条件表单 >>>>>>>> -->
+        <v-col cols="12" xs="12" sm="12" md="8" xl="9">
+          <v-row class="jh-backend-form-container justify-end ma-0 py-3">
+              <v-col cols="12" xs="12" sm="6" md="4" xl="3" class="pa-0 pr-0 pr-sm-2">
+                <v-select v-model="logFileSelected" :items="constantCollection.logFile" prefix="文件：" class="jh-v-input bg-white" dense filled single-line hide-details/>
+              </v-col>
+              <div class="jh-backend-search-btn">
+                <v-btn class="elevation-0 float-right mt-2 mt-md-0" color="success" small @click="doUiAction('refreshTableData')">
+                  查询
+                </v-btn>
+              </div>
+          </v-row>
+        </v-col>
+        <!-- <<<<<<<< pc端的搜索条件表单 -->
+      </v-row>
+    </div>
+    <!-- <<<<<<<<<<<<< 头部内容 -->
+    <div class="jh-page-body-container px-8">
+      <v-card class="rounded-lg">
+        <v-row class="ma-0 pa-4 pb-0">
+          <v-spacer></v-spacer>
+          <!--搜索过滤-->
+          <v-col cols="12" xs="8" sm="4" md="3" xl="2" class="pa-0">
+            <v-text-field color="success" v-model="searchInput" prefix="搜索：" class="jh-v-input" dense filled single-line></v-text-field>
+          </v-col>
+        </v-row>
+        <v-data-table fixed-header
+                :headers="headers"
+                :items="tableData"
+                :search="searchInput"
+                :footer-props="{ itemsPerPageOptions: [100, 200, 500, 1000, 6000] }"
+                :items-per-page="100"
+                mobile-breakpoint="0"
+                :loading="isTableLoading"
+                checkbox-color="success"
+                class="jh-fixed-table-height elevation-0 mt-0 mb-xs-4 flex-fill d-flex flex-column">
+        </v-data-table>
+      </v-card>
+    </div>
+    <!-- 帮助页抽屉 >>>>>>>>>>>>> -->
+    <v-navigation-drawer v-model="isHelpPageDrawerShown" v-click-outside="drawerClickOutside" fixed temporary right width="80%" class="elevation-24">
+      <iframe style="border: 0" :src="`/${appInfo.appId}/pageDoc#10.pageLog.md`" width="100%" height="100%"></iframe>
+      <v-btn elevation="0" color="success" fab absolute top left small tile class="drawer-close-float-btn" @click="isHelpPageDrawerShown = false">
+        <v-icon>mdi-close</v-icon>
+      </v-btn>
+    </v-navigation-drawer>
+    <!-- <<<<<<<<<<< 帮助页抽屉 -->
+  </v-main>
+ </v-app>
+
+<jh-toast />
+<jh-mask />
+<jh-confirm-dialog />
+</div>
+</script>
+
+<div id="app">
+</div>
+{% endblock %}
+
+{% block vueScript %}
+
+{% include 'common/jianghuJs/fixedTableHeightV4.html' %}
+
+<script type="module">
+new Vue({
+  el: '#app',
+  template: '#app-template',
+  vuetify: new Vuetify(),
+  data: () => ({
+    // 表格相关数据
+    isFormValid: true,
+    requireRules: [
+      v => !!v || 'This is required',
+    ],
+    constantCollection: {
+      logFile: [],
+    },
+    breadcrumbs: [
+      {text: '首页', disabled: true,},
+      {text: '页面访问日志', disabled: true,}
+    ],
+    isHelpPageDrawerShown: false,
+
+    logFileSelected: null,
+    searchInput: null,
+    isTableLoading: true,
+
+    tableDataFromBackend: [],
+    headers: [
+      {text: "访问时间", value: "date", width: 200, class: 'fixed', cellClass: 'fixed'},
+      {text: "访问页面", value: "pageName", width: 200, class: 'fixed', cellClass: 'fixed'},
+      {text: "访问页面Id", value: "pageId", width: 220},
+      {text: "访问用户Id", value: "userId", width: 120},
+      {text: "访问用户名", value: "username", width: 120},
+      {text: "设备Id", value: "deviceId", width: 120},
+      {text: "设备类型", value: "deviceType", width: 120},
+      {text: "服务器主机名", value: "hostname", width: 220},
+      {text: "服务进程Id", value: "pid", width: 120},
+    ],
+  }),
+  computed: {
+    isMobile() {
+      return window.innerWidth < 600;
+    },
+    tableData() {
+      return this.tableDataFromBackend;
+    }
+  },
+  watch: {
+    logFileSelected() {
+      this.doUiAction('refreshTableData');
+    }
+  },
+  async created() {
+    await this.doUiAction('selectLogFileList');
+    if (this.constantCollection.logFile.length > 0) {
+      this.logFileSelected = this.constantCollection.logFile[0].filename;
+    }
+    await this.doUiAction('refreshTableData');
+  },
+  mounted() {},
+  methods: {
+    async doUiAction(uiActionId, uiActionData) {
+      switch (uiActionId) {
+        case 'selectLogFileList':
+          await this.selectLogFileList();
+          break;
+        case 'refreshTableData':
+          await this.refreshTableData();
+          break;
+        default:
+          console.error("[doUiAction] uiActionId not find", { uiActionId });
+          break;
+      }
+    },
+    // =================================uiAction 公共方法 start ======================================
+    async selectLogFileList() {
+      this.isTableLoading = true;
+      const result = await window.jianghuAxios({
+        data: {
+          appData: {
+            pageId: 'pageLog',
+            actionId: 'selectLogFileList',
+            actionData: {},
+          }
+        }
+      });
+      const { rows } = result.data.appData.resultData;
+      this.constantCollection.logFile = rows.map(item => {
+        const { filename } = item;
+        return { text: filename, value: filename, filename };
+      });
+    },
+    async refreshTableData() {
+      this.isTableLoading = true;
+      const result = await window.jianghuAxios({
+        data: {
+          appData: {
+            pageId: 'pageLog',
+            actionId: 'selectItemListFromLogFile',
+            actionData: { logFile: this.logFileSelected },
+          }
+        }
+      });
+      const { rows } = result.data.appData.resultData;
+
+      this.tableDataFromBackend = rows;
+      this.isTableLoading = false;
+    },
+    // =================================uiAction 公共方法 end ======================================
+    reloadPage() {
+      //console.log('captured page expire')
+      this.tableDataFromBackend = [];
+      window.location.reload();
+    }
+  }
+})
+</script>
+
+<style>
+.v-application .pr-xs-0 {
+  padding-right: 0 !important;
+}
+
+.v-application .pt-xs-2 {
+  padding-top: 8px !important;
+}
+</style>
+{% endblock %}

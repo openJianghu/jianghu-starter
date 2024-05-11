@@ -1,0 +1,609 @@
+{% extends 'template/jhTemplateV4.html'%}
+
+{% block vueTemplate %}
+<script type="text/html" id="app-template">
+<div>
+  <v-app mobile-breakpoint="sm">
+    <jh-menu />
+    <v-main class="mt-15">
+      <!-- 头部内容 >>>>>>>>>>>>> -->
+      <div class="jh-page-second-bar px-8">
+        <v-row class="align-center">
+          <v-col cols="12" xs="12" sm="12" md="4" xl="3">
+            <div class="py-4 text-body-1 font-weight-bold">权限规则管理
+              <!-- 帮助页按钮 -->
+              <span role="button" class="success--text font-weight-regular jh-font-size-13 ml-2" @click="isHelpPageDrawerShown = true">
+                <v-icon size="13" class="success--text">mdi-help-circle-outline</v-icon>帮助
+              </span>
+            </div>
+          </v-col>
+          <!-- pc端的搜索条件表单 >>>>>>>> -->
+          <v-col cols="12" xs="12" sm="12" md="8" xl="9">
+            <v-row class="jh-backend-form-container justify-end ma-0 py-3">
+              <v-btn-toggle v-model="dataTypeSwitch" mandatory dense color="success"> 
+                <v-btn small :value="index" v-for="item, index in constantObj.dataType" :key="index"> {{item}} </v-btn> 
+              </v-btn-toggle>
+            </v-row>
+          </v-col>
+          <!-- <<<<<<<< pc端的搜索条件表单 -->
+        </v-row>
+      </div>
+      <!-- <<<<<<<<<<<<< 头部内容 -->
+
+      <div class="jh-page-body-container px-8">
+        <!-- 页面内容 >>>>>>>>>>>>> -->
+        <v-card class="rounded-lg">
+          <v-row class="ma-0 pa-4 pb-0">
+            <!--新增按钮-->
+            <v-btn color="success" class="elevation-0 mr-2" @click="doUiAction('startCreateItem')" small>新增</v-btn>
+            <v-spacer></v-spacer>
+            <!--搜索过滤-->
+            <v-col cols="12" xs="8" sm="4" md="3" xl="2" class="pa-0">
+              <v-text-field color="success" v-model="searchInput" prefix="搜索：" class="jh-v-input" dense filled single-line></v-text-field>
+            </v-col>
+          </v-row>
+          <!-- 数据表格 >>>>>>>>>>>>> -->
+          <v-data-table
+            :headers="tabPageHeaders"
+            :items="tableData"
+            :search="searchInput"
+            :loading="isTableLoading"
+            checkbox-color="success"
+            mobile-breakpoint="0"
+            :footer-props="{ itemsPerPageOptions: [20, 50, -1], itemsPerPageText: '每页行数', itemsPerPageAllText: '所有'}"
+            :items-per-page="20"
+            :class="{'zebraLine': isTableZebraLineShown }"
+            fixed-header
+            class="jh-fixed-table-height elevation-0 mt-0 mb-xs-4"
+          >
+            <!--页面类型-->
+            <template v-slot:item.pageType="{ item }">
+              {{ getDisplayText({displayObj: constantObj.pageType, displayValue: item.pageType}) }}
+            </template>
+            <!-- 表格行操作按钮 -->
+            <template v-slot:item.action="{ item }">
+              <template>
+                <!-- pc端 -->
+                <template v-if="!isMobile">
+                  <span role="button" class="success--text font-weight-medium font-size-2 mr-2" @click="doUiAction('startUpdateItem', item)">
+                    <v-icon size="16" class="success--text">mdi-note-edit-outline</v-icon>修改
+                  </span>
+                  <span role="button" class="red--text text--accent-2 font-weight-medium font-size-2" @click="doUiAction('deleteItem', item)">
+                    <v-icon size="16" class="red--text text--accent-2">mdi-trash-can-outline</v-icon>删除
+                  </span>
+                </template>
+                <!-- 手机端 -->
+                <v-menu offset-y v-if="isMobile">
+                  <template v-slot:activator="{ on, attrs }">
+                    <span role="button" class="success--text font-weight-medium font-size-2"
+                      v-bind="attrs" v-on="on">
+                      操作<v-icon size="14" class="success--text">mdi-chevron-down</v-icon>
+                    </span>
+                  </template>
+                  <v-list dense>
+                    <v-list-item @click="doUiAction('startUpdateItem', item)">
+                      <v-list-item-title>修改</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="doUiAction('deleteItem', item)">
+                      <v-list-item-title>删除</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </template>
+            </template>
+            <!--状态-->
+            <template v-slot:item.allowOrDeny="{ item }">
+              {{ getDisplayText({displayObj: constantObj.allowOrDeny, displayValue: item.allowOrDeny}) }}
+            </template>
+            <!--没有数据-->
+            <template v-slot:loading>
+              <div class="jh-no-data">数据加载中</div>
+            </template>
+            <template v-slot:no-data>
+              <div class="jh-no-data">暂无数据</div>
+            </template>
+            <template v-slot:no-results>
+              <div class="jh-no-data">暂无数据</div>
+            </template>
+            <!-- 表格分页 -->
+            <template v-slot:footer.page-text="pagination">
+              <span>{{ pagination.pageStart }}-{{ pagination.pageStop }}</span>
+              <span class="ml-1">共{{ pagination.itemsLength }}条</span>
+            </template>
+          </v-data-table>
+          <!-- <<<<<<<<<<<<< 数据表格 -->
+        </v-card>
+        <!-- 新增抽屉 >>>>>>>>>>>>> -->
+        <v-navigation-drawer v-model="isCreateDrawerShown" v-click-outside="drawerClickOutside" fixed temporary right width="80%" class="elevation-24">
+          <v-form ref="createForm" lazy-validation>
+            <!-- 抽屉标题 -->
+            <v-row no-gutters>
+              <span class="text-h7 font-weight-bold pa-4">添加信息</span>
+            </v-row>
+            <v-divider class="jh-divider"></v-divider>
+            <!-- 抽屉的主体 >>>>>>>>>>>>> -->
+            <v-row class="mt-0 px-4">
+              <v-col cols="12" sm="12" md="4">
+                <span class="jh-input-label">用户ID/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="createItem.user" :items="constantObj.user.filter(item => item.value)" @change="onConstantChange($event, 'user')"
+                  @update:search-input="onConstantChange($event, 'user')"></v-autocomplete>
+              </v-col>
+              <v-col cols="12" sm="12" md="4">
+                <span class="jh-input-label">GroupID/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="createItem.group"
+                  :items="constantObj.group.filter(item => item.value)"
+                  @update:search-input="onConstantChange($event, 'group')">
+                </v-autocomplete>
+              </v-col>
+              <v-col cols="12" sm="12" md="4">
+                <span class="jh-input-label">RoleID/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="createItem.role"
+                  :items="constantObj.role.filter(item => item.value)"
+                  @update:search-input="onConstantChange($event, 'role')">
+                </v-autocomplete>
+              </v-col>
+              <v-col v-if="dataTypeSwitch === 0" cols="12" sm="12" md="4" xl="3" class="pb-3">
+                <span class="jh-input-label">ResourceId/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="createItem.resource"
+                  :items="constantObj.resource.filter(item => item.value)"
+                  @update:search-input="onConstantChange($event, 'resource')">
+                </v-autocomplete>
+              </v-col>
+              <v-col v-if="dataTypeSwitch === 1" cols="12" sm="12" md="4" xl="3" class="pb-3">
+                <span class="jh-input-label">PageId/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="createItem.page"
+                  :items="constantObj.page.filter(item => item.value)"
+                  @update:search-input="onConstantChange($event, 'page')">
+                </v-autocomplete>
+              </v-col>
+              <v-col cols="12" sm="12" md="4">
+                <span class="jh-input-label">权限状态</span>
+                <v-select
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="createItem.allowOrDeny"
+                  :items="constantObj.allowOrDeny">
+                </v-select>
+              </v-col>
+              <v-col cols="12" sm="12" md="12" xl="12">
+                <span class="jh-input-label">desc</span>
+                <v-textarea class="jh-v-input" dense filled single-line label="desc" v-model="createItem.desc"></v-textarea>
+              </v-col>
+            </v-row>
+            <!-- <<<<<<<<<<< 抽屉的主体 -->
+            <!-- 抽屉的操作按钮 >>>>>>>>>>>>> -->
+            <v-row class="justify-end mx-0 my-8 px-4">
+              <v-btn color="success" @click="doUiAction('createItem')" small>保存</v-btn>
+              <v-btn class="ml-2" @click="isCreateDrawerShown = false" small>取消</v-btn>
+            </v-row>
+            <!-- <<<<<<<<<<< 抽屉的操作按钮 -->
+          </v-form>
+          <!-- 抽屉的关闭按钮 -->
+          <v-btn elevation="0" color="success" fab absolute top left small tile class="drawer-close-float-btn" @click="isCreateDrawerShown = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-navigation-drawer>
+        <!-- <<<<<<<<<<< 新增抽屉 -->
+
+        <!-- 编辑抽屉 >>>>>>>>>>>>> -->
+        <v-navigation-drawer v-model="isUpdateDrawerShown" v-click-outside="drawerClickOutside" fixed temporary right width="80%" class="elevation-24">
+          <v-form ref="updateForm" lazy-validation>
+            <!-- 抽屉标题 -->
+            <v-row no-gutters>
+              <span class="text-h7 font-weight-bold pa-4">修改信息</span>
+            </v-row>
+            <v-divider class="jh-divider"></v-divider>
+            <!-- 抽屉的主体 >>>>>>>>>>>>> -->
+            <v-row class="mt-0 px-4">
+              <v-col cols="12" sm="12" md="4">
+                <span class="jh-input-label">用户ID/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="updateItem.user" :items="constantObj.user.filter(item => item.value)" @change="onConstantChange($event, 'user')"
+                  @update:search-input="onConstantChange($event, 'user')"></v-autocomplete>
+              </v-col>
+              <v-col cols="12" sm="12" md="4">
+                <span class="jh-input-label">GroupID/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="updateItem.group"
+                  :items="constantObj.group.filter(item => item.value)"
+                  @update:search-input="onConstantChange($event, 'group')">
+                </v-autocomplete>
+              </v-col>
+              <v-col cols="12" sm="12" md="4">
+                <span class="jh-input-label">RoleID/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="updateItem.role"
+                  :items="constantObj.role.filter(item => item.value)"
+                  @update:search-input="onConstantChange($event, 'role')">
+                </v-autocomplete>
+              </v-col>
+              <v-col v-if="dataTypeSwitch === 0" cols="12" sm="12" md="4" xl="3" class="pb-3">
+                <span class="jh-input-label">ResourceId/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="updateItem.resource"
+                  :items="constantObj.resource.filter(item => item.value)"
+                  @update:search-input="onConstantChange($event, 'resource')">
+                </v-autocomplete>
+              </v-col>
+              <v-col v-if="dataTypeSwitch === 1" cols="12" sm="12" md="4" xl="3" class="pb-3">
+                <span class="jh-input-label">PageId/通配符(*)</span>
+                <v-autocomplete
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="updateItem.page"
+                  :items="constantObj.page.filter(item => item.value)"
+                  @update:search-input="onConstantChange($event, 'page')">
+                </v-autocomplete>
+              </v-col>
+              <v-col cols="12" sm="12" md="4">
+                <span class="jh-input-label">权限状态</span>
+                <v-select
+                  class="jh-v-input" dense filled single-line clearable
+                  v-model="updateItem.allowOrDeny"
+                  :items="constantObj.allowOrDeny">
+                </v-select>
+              </v-col>
+              <v-col cols="12" sm="12" md="12" xl="12">
+                <span class="jh-input-label">desc</span>
+                <v-textarea class="jh-v-input" dense filled single-line label="desc" v-model="updateItem.desc"></v-textarea>
+              </v-col>
+            </v-row>
+            <!-- <<<<<<<<<<< 抽屉的主体 -->
+            <!-- 抽屉的操作按钮 >>>>>>>>>>>>> -->
+            <v-row class="justify-end mx-0 my-8 px-4">
+              <v-btn color="success" @click="doUiAction('updateItem')" small>保存</v-btn>
+              <v-btn class="ml-2" @click="isUpdateDrawerShown = false" small>取消</v-btn>
+            </v-row>
+            <!-- <<<<<<<<<<< 抽屉的操作按钮 -->
+          </v-form>
+          <!-- 抽屉的关闭按钮 -->
+          <v-btn elevation="0" color="success" fab absolute top left small tile class="drawer-close-float-btn" @click="isUpdateDrawerShown = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-navigation-drawer>
+        <!-- <<<<<<<<<<< 编辑抽屉 -->
+      </div>
+      <!-- 帮助页抽屉 >>>>>>>>>>>>> -->
+      <v-navigation-drawer v-model="isHelpPageDrawerShown" v-click-outside="drawerClickOutside" fixed temporary right width="80%" class="elevation-24">
+        <iframe style="border: 0" :src="`/${appInfo.appId}/pageDoc#4.userGroupRolePageOrResourceManagement.md`" width="100%" height="100%"></iframe>
+        <v-btn elevation="0" color="success" fab absolute top left small tile class="drawer-close-float-btn" @click="isHelpPageDrawerShown = false">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-navigation-drawer>
+      <!-- <<<<<<<<<<< 帮助页抽屉 -->
+    </v-main>
+  </v-app>
+  <jh-toast />
+  <jh-mask />
+  <jh-confirm-dialog />
+</div>
+</script>
+
+<div id="app">
+</div>
+{% endblock %}
+
+{% block vueScript %}
+
+{% include 'common/jianghuJs/fixedTableHeightV4.html' %}
+
+<script type="module">
+new Vue({
+  el: '#app',
+  template: '#app-template',
+  vuetify: new Vuetify(),
+  data: {
+    isHelpPageDrawerShown: false,
+    isMobile: window.innerWidth < 500,
+    // 表格相关数据
+    isTableZebraLineShown: true,
+    validationRules: {
+      requireRules: [
+        v => !!v || 'This is required',
+      ],
+    },
+    // 常量下拉选项
+    constantObj: {
+      dataType: ['接口权限', '页面权限'],
+      user: [{"value": "*", "text": "通配符*"}, {custom: true}],
+      group: [{"value": "*", "text": "通配符*"}, {custom: true}],
+      role: [{"value": "*", "text": "通配符*"}, {custom: true}],
+      resource: [{"value": "*", "text": "通配符*"}, {custom: true}],
+      page: [{"value": "*", "text": "通配符*"}, {custom: true}],
+      allowOrDeny: [{"value": "allow", "text": "Allow"}, {"value": "deny", "text": "Deny"}],
+    },
+    searchInput: null,
+    dataTypeSwitch: 0,
+    isTableLoading: true,
+    tableData: [],
+    pageTableDataFromBackend: [],
+    tabPageHeaders: [],
+    resourceHeaders: [
+      {text: "用户ID/通配符(*)", value: "user", width: 120},
+      {text: "GroupID/通配符(*)", value: "group", width: 120},
+      {text: "RoleId/通配符(*)", value: "role", width: 120},
+      {text: "ResourceId/通配符(*)", value: "resource", width: 120, class: 'fixed', cellClass: 'fixed'},
+      {text: "权限状态", value: "allowOrDeny", width: 120},
+      {text: "说明", value: "desc", width: 420},
+      {text: "操作人", value: "operationByUser", width: 120},
+      {text: "操作时间", value: "operationAt", width: 250},
+      {text: '操作', value: 'action', align: 'center', sortable: false, width: window.innerWidth < 500 ? 80 : 120, class: 'fixed', cellClass: 'fixed'},
+    ],
+    // 页面权限字段
+    pageHeaders: [
+      {text: "用户ID/通配符(*)", value: "user", width: 120},
+      {text: "GroupID/通配符(*)", value: "group", width: 120},
+      {text: "RoleId/通配符(*)", value: "role", width: 120},
+      {text: "PageId/通配符(*)", value: "page", width: 120, class: 'fixed', cellClass: 'fixed'},
+      {text: "权限状态", value: "allowOrDeny", width: 120},
+      {text: "说明", value: "desc", width: 420},
+      {text: "操作人", value: "operationByUser", width: 120},
+      {text: "操作时间", value: "operationAt", width: 250},
+      {text: '操作', value: 'action', align: 'center', sortable: false, width: window.innerWidth < 500 ? 80 : 120, class: 'fixed', cellClass: 'fixed'},
+    ],
+    pageId: 'Resource',
+    // 新增数据
+    isCreateDrawerShown: false,
+    createItem: {},
+    createActionData: {},
+    // 编辑数据
+    isUpdateDrawerShown: false,
+    updateItem: {},
+    updateItemId: null,
+    updateActionData: {},
+    // 删除数据
+    deleteItemId: null,
+    // actionId
+    createActionId: null,
+    updateActionId: null,
+    deleteActionId: null,
+  },
+  watch: {
+    dataTypeSwitch(value) {
+      this.tableData = [];
+      if (value === 0) {
+        this.pageId = 'Resource'
+        this.tabPageHeaders = this.resourceHeaders;
+      }
+      if (value === 1) {
+        this.pageId = 'Page'
+        this.tabPageHeaders = this.pageHeaders;
+      }
+      this.doUiAction('getTableData');
+    }
+  },
+  async created() {
+    this.tabPageHeaders = this.resourceHeaders;
+  },
+  mounted() {
+    this.doUiAction('getTableData');
+  },
+  methods: {
+    async doUiAction(uiActionId, uiActionData) {
+      switch (uiActionId) {
+        case 'getTableData':
+          await this.getTableData();
+          break;
+        case 'startCreateItem':
+          await this.setConstantDefault();
+          await this.prepareCreateItem();
+          await this.openCreateItemDrawer();
+          break;
+        case 'createItem':
+          await this.prepareCreateValidate();
+          await this.confirmCreateItemDialog();
+          await this.prepareDoCreateItem();
+          await this.doCreateItem();
+          await this.closeDrawerShow();
+          await this.getTableData();
+          break;
+        case 'startUpdateItem':
+          await this.setConstantDefault();
+          await this.prepareUpdateItem(uiActionData);
+          await this.openUpdateItemDrawer();
+          break;
+        case 'updateItem':
+          await this.prepareUpdateValidate();
+          await this.confirmUpdateItemDialog();
+          await this.prepareDoUpdateItem();
+          await this.doUpdateItem();
+          await this.closeDrawerShow();
+          await this.getTableData();
+          break;
+        case 'deleteItem':
+          await this.prepareDeleteItem(uiActionData);
+          await this.confirmDeleteItemDialog();
+          await this.doDeleteItem();
+          await this.getTableData();
+          break;
+        default:
+          console.error("[doUiAction] uiActionId not find", {uiActionId});
+          break;
+      }
+    },
+    /**
+     * description: ✅获取表格数据
+     */
+    async getTableData() {
+      this.isTableLoading = true;
+      const result = await window.jianghuAxios({
+        data: {
+          appData: {
+            pageId: 'userGroupRolePageOrResourceManagement',
+            actionId: `selectItemListOf${this.pageId}`
+          }
+        }
+      });
+      this.tableData = result.data.appData.resultData.rows;
+      this.isTableLoading = false;
+    },
+    async setConstantDefault() {
+      this.constantObj = {
+        dataType: ['接口权限', '页面权限'],
+        user: [{"value": "*", "text": "通配符*"}, {custom: true}],
+        group: [{"value": "*", "text": "通配符*"}, {custom: true}],
+        role: [{"value": "*", "text": "通配符*"}, {custom: true}],
+        resource: [{"value": "*", "text": "通配符*"}, {custom: true}],
+        page: [{"value": "*", "text": "通配符*"}, {custom: true}],
+        allowOrDeny: [{"value": "allow", "text": "Allow"}, {"value": "deny", "text": "Deny"}],
+      };
+    },
+    // ---------------新增数据 uiAction >>>>>>>>>>>>>>>> ---------------
+    async prepareCreateItem() {
+      this.createItem = {};
+      this.currentOperation = 'createItem';
+    },
+    async openCreateItemDrawer() {
+      this.isCreateDrawerShown = true;
+    },
+    async prepareCreateValidate() {
+      if (await this.$refs.createForm.validate() === false) {
+        throw new Error("[prepareValidate] false");
+      }
+    },
+    async confirmCreateItemDialog() {
+      if (await window.confirmDialog({title: "新增", content: "确定新增吗？"}) === false) {
+        throw new Error("[confirmCreateFormDialog] 否");
+      }
+    },
+    async prepareDoCreateItem() {
+      this.createActionId = `insertItemOf${this.pageId}`;
+      this.createActionData = this.createItem;
+    },
+    async doCreateItem() {
+      await window.vtoast.loading("保存中");
+      await window.jianghuAxios({
+        data: {
+          appData: {
+            pageId: 'userGroupRolePageOrResourceManagement',
+            actionId: this.createActionId,
+            actionData: this.createActionData
+          }
+        }
+      })
+      await window.vtoast.success("保存成功");
+    },
+    async closeCreateDrawer() {
+      this.createActionId = null;
+      this.createActionData = null;
+      this.createItem = {};
+      this.isCreateDrawerShown = false;
+      this.currentOperation = null;
+    },
+    // ---------------新增数据 uiAction <<<<<<<<<<<<<<<< ---------------
+    // ---------------编辑数据 uiAction >>>>>>>>>>>>>>>> ---------------
+    async prepareUpdateItem(funObj) {
+      this.updateItem = _.cloneDeep(funObj);
+      this.currentOperation = 'updateItem';
+      Object.keys(this.updateItem).forEach((key) => {
+        this.onConstantChange(this.updateItem[key], key)
+      })
+    },
+    async openUpdateItemDrawer() {
+      this.isUpdateDrawerShown = true;
+    },
+    async prepareUpdateValidate() {
+      if (await this.$refs.updateForm.validate() === false) {
+        throw new Error("[prepareValidate] false");
+      }
+    },
+    async confirmUpdateItemDialog() {
+      if (await window.confirmDialog({title: "修改", content: "确定修改吗？"}) === false) {
+        throw new Error("[confirmUpdateItemDialog] 否");
+      }
+    },
+    async prepareDoUpdateItem() {
+      const {id, ...data} = this.updateItem;
+      this.updateActionId = `updateItemOf${this.pageId}`;
+      this.updateItemId = id;
+      this.updateActionData = data;
+    },
+    async doUpdateItem() {
+      await window.vtoast.loading("保存中");
+      delete this.updateItem.id;
+      await window.jianghuAxios({
+        data: {
+          appData: {
+            pageId: 'userGroupRolePageOrResourceManagement',
+            actionId: this.updateActionId,
+            actionData: this.updateActionData,
+            where: {id: this.updateItemId}
+          }
+        }
+      })
+      await window.vtoast.success("修改成功");
+    },
+    async closeUpdateDrawer() {
+      this.updateItem = {};
+      this.updateActionId = null;
+      this.updateItemId = null;
+      this.updateActionData = null;
+      this.isUpdateDrawerShown = false;
+      this.currentOperation = null;
+    },
+    // ---------------编辑数据 uiAction <<<<<<<<<<<<<<<< ---------------
+    // ---------------删除数据 uiAction >>>>>>>>>>>>>>>> ---------------
+    async prepareDeleteItem(funObj) {
+      this.deleteItemId = funObj.id;
+      this.deleteActionId = `deleteItemOf${this.pageId}`;
+    },
+    async confirmDeleteItemDialog() {
+      if (await window.confirmDialog({title: "删除", content: "确定删除吗？"}) === false) {
+        throw new Error("[confirmDeleteItemDialog] 否");
+      }
+    },
+    async doDeleteItem() {
+      window.vtoast.loading('正在删除');
+      await window.jianghuAxios({
+        data: {
+          appData: {
+            pageId: 'userGroupRolePageOrResourceManagement',
+            actionId: this.deleteActionId,
+            where: {id: this.deleteItemId}
+          }
+        }
+      });
+      window.vtoast.success('删除成功');
+      this.deleteActionId = null;
+      this.deleteItemId = null;
+    },
+    // description: ✅动态增加下来选项
+    onConstantChange(e, key) {
+      if (!this.constantObj[key]) {
+        return;
+      }
+      if (e && e !== '*' && e !== '通配符*') {
+        let customItem = this.constantObj[key].find(item => item.custom);
+        if (!customItem) {
+          return;
+        }
+        this.$set(customItem, 'value', e);
+        this.$set(customItem, 'text', e);
+        if (this.currentOperation === 'createItem') {
+          this.createItem[key] = e
+        }
+        if (this.currentOperation === 'updateItem') {
+          this.updateItem[key] = e
+        }
+      }
+    }
+    // ---------------删除数据 uiAction <<<<<<<<<<<<<<<< ---------------
+  }
+})
+</script>
+<style>
+</style>
+
+{% endblock %}

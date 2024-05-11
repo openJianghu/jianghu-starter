@@ -1,0 +1,59 @@
+{% extends 'template/jhTemplateV4.html'%}
+
+{% block vueTemplate %}
+
+<script type="text/html" id="app-template">
+  <div>
+    <v-app mobile-breakpoint="sm">
+      <jh-menu />
+      <v-main class="mt-13">
+        <!-- 头部内容 >>>>>>>>>>>>> -->
+        <div class="jh-page-second-bar px-8">
+          <v-row class="align-center">
+            <v-col cols="12" xs="12" sm="12" md="4" xl="3">
+              <div class="py-4 text-body-1 font-weight-bold">错误信息</div>
+            </v-col>
+          </v-row>
+        </div>
+        <!-- <<<<<<<<<<<<< 头部内容 -->
+
+        <div class="jh-page-body-container px-8">
+          <v-card class="rounded-lg jh-page-doc-container pa-3">
+          <!-- 页面内容 >>>>>>>>>>>>> -->
+          <div>
+            <h2><$ ctx.error.errorCode $> : <$ ctx.error.errorReason $></h2>
+            <hr/>
+            <h2><$ ctx.error.errorReasonSupplement $></h2>
+          </div>
+          <div v-else>
+            <h2>亲，你似乎迷路了？</h2>
+          </div>
+          <!-- <<<<<<<<<<<<< 页面内容 -->
+          </v-card>
+        </div>
+      </v-main>
+    </v-app>
+    <jh-toast />
+    <jh-confirm-dialog />
+  </div>
+</script>
+
+<div id="app">
+</div>
+
+
+{% endblock %}
+
+{% block vueScript %}
+
+<script type="module">
+  new Vue({
+    el: '#app',
+    template: '#app-template',
+    vuetify: new Vuetify(),
+    data: () => ({}),
+    async created() {},
+    methods: {}
+  })
+</script>
+{% endblock %}

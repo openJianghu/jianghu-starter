@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/jianghujs_advanced_java?useSSL=false&serverTimezone=UTC
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.jianghu: DEBUG
+jianghu.config:
+  authTokenForTest: 123456
+  appTitle: 江湖演示
+  jianghuConfig:
+    enableUserInfoCache: false

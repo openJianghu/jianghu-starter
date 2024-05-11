@@ -1,0 +1,55 @@
+spring:
+  profiles.active: local
+  application.name: jianghu
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/jianghu?useSSL=false&serverTimezone=UTC
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+  devtools:
+    restart:
+      enabled: false
+    livereload:
+      enabled: true
+  # 阻止所有跨域请求
+  web:
+    cors:
+      enabled: true
+      max-age: 3600
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.jianghu: DEBUG
+jianghu.config:
+  appId: jianghu
+  appTitle: jianghu-basic
+  authTokenKey: ${jianghu.config.appId}
+  appType: single
+  appDirectoryLink: "/"
+  indexPage: /${jianghu.config.appId}/page/studentManagement
+  loginPage: /${jianghu.config.appId}/page/login
+  helpPage: /${jianghu.config.appId}/page/help
+  primaryColor: "#1867c0"
+  jianghuConfig:
+    enableHtmlErrorLogRecord: false
+    htmlErrorLogRecordInterval: 60000
+    enableResourceLogRecord: true
+    # ignoreListOfResourceLogRecord 被读取成map了, 所以使用 map.values()
+    ignoreListOfResourceLogRecord: [ login.passwordLogin, allPage.getConstantList, allPage.httpUploadByStream, allPage.httpUploadByBase64, allPage.httpDownloadByBase64 ]
+    enableSocket: false
+    enableSyncSocketStatus: false
+    syncSocketStatusRefreshInterval: 60*1000
+    enableUserInfoCache: false
+    userInfoCacheRefreshInterval: 10*1000
+    enableUploadStaticFileCache: true
+    enableUploadStaticFileAuthorization: false
+    uploadFileMaxAge: 2592000000 # 30d in milliseconds
+    jhIdConfig:
+      enable: false
+      jhId: ""
+      careTableViewList: [ _cache, _constant, _file, _group, _page, _record_history, _resource, _resource_request_log, _role, _test_case, _ui, _user, _user_group_role, _user_group_role_page, _user_group_role_resource, _user_session, _view01_user ]
