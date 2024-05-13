@@ -13,7 +13,7 @@
 	<version>5.0.1</version>
 	<packaging>jar</packaging>
 	<name>jianghu-starter</name>
-	<description>JIANGHU Framework</description>
+	<description>JIANGHU Framework 11</description>
 	<properties>
 		<java.version>11</java.version>
 	</properties>
@@ -24,5 +24,43 @@
 			<optional>true</optional>
 		</dependency>
 	</dependencies>
+
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<skip>true</skip> <!-- 使用 <skip>true</skip> 配置来跳过此插件的执行 -->
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<skip>true</skip> <!-- 使用 <skip>true</skip> 配置来跳过此插件的执行 -->
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.2.0</version>
+				<configuration>
+					<excludes>
+						<exclude>application-*.yml</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 
 </project>
