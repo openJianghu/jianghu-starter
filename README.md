@@ -14,4 +14,8 @@
 - jianghu-starter 发包:  ./mvnw clean package
 
 
+## 发包到 sonatype-nexus-repository
+
+- 
+
 
